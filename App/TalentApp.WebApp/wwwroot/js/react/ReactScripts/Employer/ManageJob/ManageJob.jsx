@@ -18,7 +18,8 @@ export default class ManageJob extends React.Component {
             loaderData: loader,
             activePage: 1,
             sortBy: {
-                date: "desc"
+                date: "desc",
+                display: "Newest First",
             },
             filter: {
                 showActive: true,
@@ -27,13 +28,16 @@ export default class ManageJob extends React.Component {
                 showExpired: true,
                 showUnexpired: true
             },
-            totalPages: 1,
+            totalPages: 0,
+            pageSize: 6,
             activeIndex: ""
         }
+
         this.loadData = this.loadData.bind(this);
         this.init = this.init.bind(this);
         this.loadNewData = this.loadNewData.bind(this);
-
+        this.toggleFilter = this.toggleFilter.bind(this);
+        this.handlePaginationChange = this.handlePaginationChange.bind(this);
     };
 
     init() {
@@ -55,7 +59,6 @@ export default class ManageJob extends React.Component {
         var link = 'https://talentservicestalent20190827015426.azurewebsites.net/listing/listing/getSortedEmployerJobs';
         var cookies = Cookies.get('talentAuthToken');
         var { filter } = this.state;
-
         $.ajax({
             url: link,
             headers: {
@@ -76,10 +79,12 @@ export default class ManageJob extends React.Component {
             },
             success: function (res) {
                 let loadJobs = null;
-                if (res.myJobs.length > 0) {
+                let totalPages = 0;
+                if (res.totalCount > 0) {
                     loadJobs = res.myJobs
+                    totalPages = Math.ceil(res.totalCount / this.state.pageSize)
                 }
-                this.setState({ loadJobs })
+                this.setState({ loadJobs, totalPages })
                 callback();
             }.bind(this),
             error: function (res) {
@@ -102,6 +107,16 @@ export default class ManageJob extends React.Component {
         });
     }
 
+    toggleFilter(filterName) {
+        const { filter } = this.state;
+        filter[filterName] = !filter[filterName];
+        this.setState({ filter }, this.init);
+    }
+
+    handlePaginationChange(e, { activePage }) {
+        this.setState({ activePage }, this.init)
+    }
+
     render() {
         return (
             <BodyWrapper reload={this.init} loaderData={this.state.loaderData}>
@@ -112,27 +127,66 @@ export default class ManageJob extends React.Component {
                     <span>Filter: </span>
                     <Dropdown text='Choose Filter'>
                         <Dropdown.Menu>
-                            <Dropdown.Item icon='folder' text='Active' />
-                            <Dropdown.Item icon='ban' text='Closed' />
-                            <Dropdown.Item icon='edit' text='Draft' />
-                            <Dropdown.Item icon='time' text='Expired' />
-                            <Dropdown.Item icon='newspaper outline' text='Unexpired' />
+                            <Dropdown.Item onClick={() => this.toggleFilter("showActive")}>
+                                <Checkbox
+                                    label="Active"
+                                    checked={this.state.filter.showActive}
+                                    disabled
+                                />
+                            </Dropdown.Item>
+                            <Dropdown.Item onClick={() => this.toggleFilter("showClosed")}>
+                                <Checkbox
+                                    label="Closed"
+                                    checked={this.state.filter.showClosed}
+                                    disabled
+                                />
+                            </Dropdown.Item>
+                            <Dropdown.Item onClick={() => this.toggleFilter("showDraft")}>
+                                <Checkbox
+                                    label="Draft"
+                                    checked={this.state.filter.showDraft}
+                                    disabled
+                                />
+                            </Dropdown.Item>
+                            <Dropdown.Item onClick={() => this.toggleFilter("showExpired")}>
+                                <Checkbox
+                                    label="Expired"
+                                    checked={this.state.filter.showExpired}
+                                    disabled
+                                />
+                            </Dropdown.Item>
+                            <Dropdown.Item onClick={() => this.toggleFilter("showUnexpired")}>
+                                <Checkbox
+                                    label="Unexpired"
+                                    checked={this.state.filter.showUnexpired}
+                                    disabled
+                                />
+                            </Dropdown.Item>
                         </Dropdown.Menu>
                     </Dropdown>
 
                     <Icon name="calendar" />
                     <span>Sort by date: </span>
-                    <Dropdown text='Newest first'>
+                    <Dropdown text={this.state.sortBy.display}>
                         <Dropdown.Menu>
-                            <Dropdown.Item text='Newest first' />
-                            <Dropdown.Item text='Oldest first' />
+                            <Dropdown.Item
+                                text='Newest first'
+                                onClick={() => this.setState({ sortBy: { date: "desc", display: "Newest First" } }, this.init)}
+                            />
+                            <Dropdown.Item
+                                text='Oldest first'
+                                onClick={() => this.setState({ sortBy: { date: "asc", display: "Oldest First" } }, this.init)}
+                            />
                         </Dropdown.Menu>
                     </Dropdown>
 
                     {this.state.loadJobs ? this.renderJobSummaryCards() : <p>No Jobs Found</p>}
 
                     <div style={{ margin: 20, minHeight: 40 }}>
-                        <Pagination defaultActivePage={1} totalPages={this.state.totalPages} floated="right" />
+                        <Pagination totalPages={this.state.totalPages}
+                            floated="right"
+                            activePage={this.state.activePage}
+                            onPageChange={this.handlePaginationChange} />
                     </div>
                 </div>
             </BodyWrapper>
